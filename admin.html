@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Admin Panel | Eco Oil Connect</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="nav"></div>
+<main>
+  <div class="wrap" id="content">
+    <div class="page-head">
+      <div class="eyebrow">Admin panel</div>
+      <h1>Users, requests and messages</h1>
+    </div>
+    <div class="grid4" id="tiles" style="margin-bottom:28px"></div>
+    <div class="tabs" role="tablist">
+      <button type="button" data-tab="users" class="on">Users</button>
+      <button type="button" data-tab="reqs">Requests</button>
+      <button type="button" data-tab="msgs">Messages</button>
+    </div>
+    <div id="panel"></div>
+  </div>
+</main>
+<div id="foot"></div>
+<script src="config.js"></script>
+<script src="app.js"></script>
+<script>
+  EOC.boot();
+  var $ = function (id) { return document.getElementById(id); };
+  var u = EOC.guard(['admin']);
+  if (u) {
+    var e = EOC.esc, tab = 'users';
+    function tiles() {
+      var d = EOC.load();
+      var t = function (n, l) { return '<div class="tile"><b>' + n + '</b><span>' + l + '</span></div>'; };
+      $('tiles').innerHTML = t(d.users.filter(function (x) { return x.role === 'restaurant'; }).length, 'Restaurants') +
+        t(d.users.filter(function (x) { return x.role === 'collector'; }).length, 'Collectors') +
+        t(d.requests.length, 'Requests') + t(d.messages.length, 'Messages');
+    }
+    function table(head, rows) {
+      return '<div class="tablewrap"><table><thead><tr>' + head.map(function (h) { return '<th>' + h + '</th>'; }).join('') + '</tr></thead><tbody>' + rows + '</tbody></table></div>';
+    }
+    function render() {
+      var d = EOC.load(), html;
+      tiles();
+      document.querySelectorAll('[data-tab]').forEach(function (b) { b.classList.toggle('on', b.dataset.tab === tab); });
+      if (tab === 'users') {
+        html = table(['Name', 'Role', 'Contact', 'Email', 'Phone', 'Address', ''], d.users.map(function (x) {
+          return '<tr><td>' + e(x.name) + '</td><td>' + e(x.role) + '</td><td>' + e(x.contact) + '</td><td>' + e(x.email) + '</td><td>' + e(x.phone) + '</td><td>' + e(x.address) + '</td><td>' +
+            (x.id === u.id ? '' : '<button class="btn danger small" data-deluser="' + x.id + '">Delete</button>') + '</td></tr>';
+        }).join(''));
+      } else if (tab === 'reqs') {
+        html = d.requests.length ? table(['Restaurant', 'Litres', 'Address', 'Status', 'Collector', 'Biofuel company', 'Requested', ''], d.requests.slice().reverse().map(function (r) {
+          return '<tr><td>' + e(r.restaurantName) + '</td><td>' + e(r.litres) + '</td><td>' + e(r.address) + ' <a href="' + EOC.mapsLink(r) + '" target="_blank" rel="noopener">Map</a></td><td><select data-rs="' + r.id + '" aria-label="Status">' +
+            Object.keys(EOC.STATUS).map(function (k) { return '<option value="' + k + '"' + (k === r.status ? ' selected' : '') + '>' + EOC.STATUS[k] + '</option>'; }).join('') +
+            '</select></td><td>' + e(r.collectorName || '-') + '</td><td>' + e(r.biofuel || '-') + '</td><td>' + EOC.fmtDate(r.created) + '</td><td><button class="btn danger small" data-delreq="' + r.id + '">Delete</button></td></tr>';
+        }).join('')) : '<div class="empty">No requests yet.</div>';
+      } else {
+        html = d.messages.length ? table(['From', 'Email', 'Message', 'Sent'], d.messages.slice().reverse().map(function (m) {
+          return '<tr><td>' + e(m.name) + '</td><td>' + e(m.email) + '</td><td>' + e(m.text) + '</td><td>' + EOC.fmtDate(m.at) + '</td></tr>';
+        }).join('')) : '<div class="empty">No messages yet.</div>';
+      }
+      $('panel').innerHTML = html;
+    }
+    document.querySelector('.tabs').addEventListener('click', function (ev) {
+      var b = ev.target.closest('[data-tab]'); if (!b) return; tab = b.dataset.tab; render();
+    });
+    $('panel').addEventListener('click', function (ev) {
+      var du = ev.target.closest('[data-deluser]'), dr = ev.target.closest('[data-delreq]');
+      if (du && confirm('Delete this user?')) { EOC.deleteUser(du.dataset.deluser); render(); }
+      if (dr && confirm('Delete this request?')) { EOC.deleteRequest(dr.dataset.delreq); render(); }
+    });
+    $('panel').addEventListener('change', function (ev) {
+      if (ev.target.matches('[data-rs]')) { EOC.setStatus(ev.target.dataset.rs, ev.target.value); render(); }
+    });
+    render();
+  }
+</script>
+</body>
+</html>
