@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dashboard | Eco Oil Connect</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="nav"></div>
+<main>
+  <div class="wrap" id="content">
+    <div class="page-head">
+      <div class="eyebrow">Dashboard</div>
+      <h1>Status and activity</h1>
+      <p id="intro"></p>
+    </div>
+    <div class="grid4" id="tiles"></div>
+    <div class="grid2" style="margin-top:24px">
+      <div class="card"><h3>Requests by status</h3><div class="bars" id="bars"></div></div>
+      <div class="card"><h3>Recent activity</h3><ul class="feed" id="feed"></ul></div>
+    </div>
+  </div>
+</main>
+<div id="foot"></div>
+<script src="config.js"></script>
+<script src="app.js"></script>
+<script>
+  EOC.boot();
+  var $ = function (id) { return document.getElementById(id); };
+  var u = EOC.guard();
+  if (u) {
+    $('intro').textContent = u.role === 'restaurant' ? 'Your requests at a glance.'
+      : u.role === 'collector' ? 'Open requests and the ones you have taken on.' : 'The whole platform at a glance.';
+    var rs = EOC.visibleRequests();
+    var count = function (s) { return rs.filter(function (r) { return r.status === s; }).length; };
+    var delivered = rs.filter(function (r) { return r.status === 'delivered'; }).reduce(function (a, r) { return a + r.litres; }, 0);
+    var tile = function (n, l) { return '<div class="tile"><b>' + n + '</b><span>' + l + '</span></div>'; };
+    $('tiles').innerHTML = tile(rs.length, 'Requests') + tile(count('submitted'), 'Waiting') + tile(count('accepted') + count('picked_up'), 'In progress') + tile(delivered, 'Litres delivered');
+
+    var max = Math.max(1, rs.length);
+    $('bars').innerHTML = Object.keys(EOC.STATUS).map(function (k) {
+      var n = count(k);
+      return '<div class="bar"><span>' + EOC.STATUS[k] + '</span><i style="width:' + Math.round(n / max * 100) + '%"></i><b>' + n + '</b></div>';
+    }).join('');
+
+    var events = [];
+    rs.forEach(function (r) { r.history.forEach(function (h) { events.push({ r: r, h: h }); }); });
+    events.sort(function (a, b) { return b.h.at - a.h.at; });
+    $('feed').innerHTML = events.length ? events.slice(0, 8).map(function (x) {
+      return '<li><span>' + EOC.esc(x.r.restaurantName) + ' (' + EOC.esc(x.r.litres) + ' L): ' + EOC.STATUS[x.h.status].toLowerCase() + ' by ' + EOC.esc(x.h.by) + '</span><span class="muted">' + EOC.fmtDate(x.h.at) + '</span></li>';
+    }).join('') : '<li class="muted">Nothing yet.</li>';
+  }
+</script>
+</body>
+</html>

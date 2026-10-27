@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Contact Us | Eco Oil Connect</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="nav"></div>
+<main id="content">
+  <div class="wrap">
+    <div class="page-head">
+      <div class="eyebrow">Contact us</div>
+      <h1>Questions about a pickup?</h1>
+      <p>Send us a message here, or reach us directly.</p>
+    </div>
+    <div class="grid2">
+      <form id="cf" class="card edge form-grid" novalidate>
+        <div class="field"><label for="cname">Your name</label><input id="cname" required></div>
+        <div class="field"><label for="cemail">Your email</label><input id="cemail" type="email" required></div>
+        <div class="field full"><label for="ctext">Message</label><textarea id="ctext" required></textarea></div>
+        <p class="err full" id="cerr" role="alert"></p>
+        <div class="full"><button class="btn primary" type="submit">Send message</button></div>
+      </form>
+      <div class="card">
+        <h3>Reach us directly</h3>
+        <p class="mono" id="direct" style="margin:0 0 14px"></p>
+        <p class="muted" style="margin:0">Messages sent from this page are saved for the admin and can be read in the Admin Panel.</p>
+      </div>
+    </div>
+  </div>
+</main>
+<div id="foot"></div>
+<script src="config.js"></script>
+<script src="app.js"></script>
+<script>
+  EOC.boot();
+  var $ = function (id) { return document.getElementById(id); };
+  $('direct').innerHTML = 'Email: ' + EOC.esc(EOC.CONTACT.email) + '<br>Phone: ' + EOC.esc(EOC.CONTACT.phone);
+  var u = EOC.me();
+  if (u) { $('cname').value = u.contact || u.name; $('cemail').value = u.email; }
+  $('cf').addEventListener('submit', function (e) {
+    e.preventDefault();
+    if (!$('cname').value.trim() || !$('cemail').value.trim() || !$('ctext').value.trim()) { $('cerr').textContent = 'Fill in your name, email and message.'; return; }
+    EOC.addMessage({ name: $('cname').value.trim(), email: $('cemail').value.trim(), text: $('ctext').value.trim() });
+    $('ctext').value = ''; $('cerr').textContent = '';
+    EOC.toast('Message saved for the admin.');
+  });
+</script>
+</body>
+</html>
