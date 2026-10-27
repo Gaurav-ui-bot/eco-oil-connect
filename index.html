@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Eco Oil Connect</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="nav"></div>
+<main id="content">
+  <div class="wrap">
+    <div class="hero">
+      <div class="eyebrow">Used cooking oil, collected</div>
+      <h1>Don't pour it down the drain. <span class="accent">Hand it to someone who can use it.</span></h1>
+      <p class="lede">Eco Oil Connect links hotels and cloud kitchens that have used cooking oil with collectors who pick it up and deliver it to biofuel companies. Register, raise a request, and follow the oil from your kitchen to the processor.</p>
+      <div class="row" id="cta"></div>
+    </div>
+  </div>
+
+  <section class="band">
+    <div class="wrap">
+      <h2>One request, four stops</h2>
+      <p class="muted" style="max-width:38em;margin:0 0 28px">Every request moves through the same stops, and its status shows which one it has reached.</p>
+      <ol class="flow grid4">
+        <li><h3>Restaurant registers</h3><p>A hotel or cloud kitchen enters its name, address, contact details and an estimate of its used oil.</p></li>
+        <li><h3>Collection request</h3><p>The restaurant submits a request with the quantity, container and a pin on the map.</p></li>
+        <li><h3>Collector handles the oil</h3><p>A collector reviews the request, accepts it and collects the oil.</p></li>
+        <li><h3>Biofuel company receives it</h3><p>The collected oil goes to a suitable biofuel company for processing.</p></li>
+      </ol>
+    </div>
+  </section>
+
+  <section class="band">
+    <div class="wrap">
+      <div class="grid3">
+        <div class="card"><h3>For hotels and cloud kitchens</h3><p class="muted" style="margin:0">Raise a pickup request in a minute and track it until the oil is delivered.</p></div>
+        <div class="card"><h3>For collectors</h3><p class="muted" style="margin:0">See open requests on a Google map, accept the ones on your route and update their status.</p></div>
+        <div class="card"><h3>For the project team</h3><p class="muted" style="margin:0">An admin panel to manage users and requests, and a dashboard of activity.</p></div>
+      </div>
+    </div>
+  </section>
+</main>
+<div id="foot"></div>
+<script src="config.js"></script>
+<script src="app.js"></script>
+<script>
+  EOC.boot();
+  var u = EOC.me();
+  document.getElementById('cta').innerHTML = u
+    ? '<a class="btn primary" href="dashboard.html">Open dashboard</a>' + (u.role === 'restaurant' ? '<a class="btn" href="sell.html">Sell used oil</a>' : '<a class="btn" href="requests.html">Collection requests</a>')
+    : '<a class="btn primary" href="auth.html">Register your kitchen</a><a class="btn" href="about.html">Read the idea</a>';
+</script>
+</body>
+</html>
