@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Collection Requests | Eco Oil Connect</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="nav"></div>
+<main>
+  <div class="wrap" id="content">
+    <div class="page-head">
+      <div class="eyebrow">Collection requests</div>
+      <h1>Requests and their status</h1>
+      <p id="intro"></p>
+    </div>
+    <div class="req-layout">
+      <div class="req-list" id="list"></div>
+      <div class="map" id="map" aria-label="Map of collection requests"></div>
+    </div>
+  </div>
+</main>
+<div id="foot"></div>
+<script src="config.js"></script>
+<script src="app.js"></script>
+<script>
+  EOC.boot();
+  var $ = function (id) { return document.getElementById(id); };
+  var u = EOC.guard();
+  if (u) {
+    var e = EOC.esc;
+    var map = null, markers = [];
+
+    $('intro').textContent = u.role === 'restaurant' ? 'Every request you have raised, and where it has reached.'
+      : u.role === 'collector' ? 'Open requests you can accept, and the ones you have taken on.'
+      : 'All requests on the platform.';
+
+    function stepper(r) {
+      if (r.status === 'rejected') return '<div class="notice" style="margin-top:12px">This request was rejected by a collector.</div>';
+      var at = EOC.STEPS.indexOf(r.status);
+      return '<div class="stepper">' + EOC.STEPS.map(function (s, i) {
+        var cls = i < at || r.status === 'delivered' ? 'done' : (i === at ? 'now' : '');
+        return '<div class="' + cls + '">' + EOC.STEP_LABEL[s] + '</div>';
+      }).join('') + '</div>';
+    }
+
+    function actions(r) {
+      if (u.role === 'collector') {
+        if (r.status === 'submitted') {
+          return '<button class="btn primary small" data-act="accept" data-id="' + r.id + '">Accept</button>' +
+                 '<button class="btn danger small" data-act="reject" data-id="' + r.id + '">Reject</button>';
+        }
+        if (r.status === 'accepted' && r.collectorId === u.id) {
+          return '<button class="btn primary small" data-act="pick" data-id="' + r.id + '">Mark picked up</button>';
+        }
+        if (r.status === 'picked_up' && r.collectorId === u.id) {
+          return '<input type="text" id="bf_' + r.id + '" placeholder="Biofuel company name" aria-label="Biofuel company name">' +
+                 '<button class="btn primary small" data-act="deliver" data-id="' + r.id + '">Mark delivered</button>';
+        }
+      }
+      return '';
+    }
+
+    function card(r) {
+      return '<article class="card req" id="req_' + r.id + '">' +
+        '<div class="req-top"><h3>' + e(r.restaurantName) + '</h3><span class="pill ' + r.status + '">' + EOC.STATUS[r.status] + '</span></div>' +
+        stepper(r) +
+        '<dl>' +
+          '<dt>Oil</dt><dd>' + e(r.litres) + ' litres, ' + e(r.container) + '</dd>' +
+          '<dt>Ready</dt><dd>' + e(r.readyDate) + ', ' + e(String(r.window).toLowerCase()) + '</dd>' +
+          '<dt>Address</dt><dd>' + e(r.address) + ' <a href="' + EOC.mapsLink(r) + '" target="_blank" rel="noopener">Open in Google Maps</a></dd>' +
+          '<dt>Contact</dt><dd>' + e(r.contact) + ', ' + e(r.phone) + '</dd>' +
+          (r.notes ? '<dt>Notes</dt><dd>' + e(r.notes) + '</dd>' : '') +
+          (r.collectorName ? '<dt>Collector</dt><dd>' + e(r.collectorName) + '</dd>' : '') +
+          (r.biofuel ? '<dt>Delivered to</dt><dd>' + e(r.biofuel) + '</dd>' : '') +
+          '<dt>Raised</dt><dd>' + EOC.fmtDate(r.created) + '</dd>' +
+        '</dl>' +
+        '<div class="req-actions">' + actions(r) + '</div>' +
+      '</article>';
+    }
+
+    function emptyText() {
+      if (u.role === 'restaurant') return 'You have not raised a request yet. <a href="sell.html">Sell used oil</a> to create one.';
+      if (u.role === 'collector') return 'No open requests right now. Check back soon.';
+      return 'No requests yet.';
+    }
+
+    function render() {
+      var rs = EOC.visibleRequests().slice().sort(function (a, b) { return b.created - a.created; });
+      $('list').innerHTML = rs.length ? rs.map(card).join('') : '<div class="empty">' + emptyText() + '</div>';
+      drawMarkers(rs);
+    }
+
+    function drawMarkers(rs) {
+      if (!map) return;
+      markers.forEach(function (m) { m.setMap(null); });
+      markers = [];
+      var bounds = new google.maps.LatLngBounds(), n = 0;
+      rs.forEach(function (r) {
+        if (r.lat == null || r.lng == null) return;
+        var m = new google.maps.Marker({ map: map, position: { lat: r.lat, lng: r.lng }, title: r.restaurantName + ' (' + r.litres + ' L)' });
+        m.addListener('click', function () {
+          var el = $('req_' + r.id);
+          document.querySelectorAll('.req.hl').forEach(function (x) { x.classList.remove('hl'); });
+          if (el) { el.classList.add('hl'); el.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+        });
+        markers.push(m); bounds.extend(m.getPosition()); n++;
+      });
+      if (n === 1) { map.setCenter(bounds.getCenter()); map.setZoom(15); }
+      else if (n > 1) map.fitBounds(bounds);
+    }
+
+    $('list').addEventListener('click', function (ev) {
+      var b = ev.target.closest('[data-act]'); if (!b) return;
+      var id = b.dataset.id, act = b.dataset.act;
+      if (act === 'accept') { EOC.setStatus(id, 'accepted'); EOC.toast('Request accepted.'); }
+      if (act === 'reject') { EOC.setStatus(id, 'rejected'); EOC.toast('Request rejected.'); }
+      if (act === 'pick') { EOC.setStatus(id, 'picked_up'); EOC.toast('Marked as picked up.'); }
+      if (act === 'deliver') {
+        var name = ($('bf_' + id).value || '').trim();
+        if (!name) { EOC.toast('Enter the biofuel company name first.'); return; }
+        EOC.setStatus(id, 'delivered', { biofuel: name });
+        EOC.toast('Marked as delivered.');
+      }
+      render();
+    });
+
+    render();
+    EOC.loadMaps().then(function (ok) {
+      if (!ok) { EOC.mapsMissingNote($('map')); $('map').classList.add('static'); return; }
+      map = new google.maps.Map($('map'), { center: EOC_CONFIG.DEFAULT_CENTER, zoom: 11, streetViewControl: false, mapTypeControl: false });
+      render();
+    });
+  }
+</script>
+</body>
+</html>

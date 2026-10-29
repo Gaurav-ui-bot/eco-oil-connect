@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sell Used Oil | Eco Oil Connect</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="nav"></div>
+<main>
+  <div class="wrap" id="content">
+    <div class="page-head">
+      <div class="eyebrow">Sell used oil</div>
+      <h1>Raise a collection request</h1>
+      <p>Tell collectors how much oil you have, where it is and when it is ready. A collector will accept the request and pick it up.</p>
+    </div>
+    <div class="grid2">
+      <form class="card" id="f" autocomplete="off" novalidate>
+        <div class="form-grid">
+          <div class="field">
+            <label for="name">Restaurant or kitchen name</label>
+            <input id="name" type="text" required>
+          </div>
+          <div class="field">
+            <label for="contact">Contact person</label>
+            <input id="contact" type="text" required>
+          </div>
+          <div class="field">
+            <label for="phone">Phone</label>
+            <input id="phone" type="text" inputmode="tel" required>
+          </div>
+          <div class="field">
+            <label for="litres">Oil to collect (litres)</label>
+            <input id="litres" type="number" min="1" max="5000" step="1" value="20" required>
+          </div>
+          <div class="field">
+            <label for="container">Stored in</label>
+            <select id="container">
+              <option>Sealed plastic bottles</option>
+              <option>Jerrycan</option>
+              <option>Drum</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="readyDate">Ready from</label>
+            <input id="readyDate" type="date" required>
+          </div>
+          <div class="field">
+            <label for="window">Best time</label>
+            <select id="window">
+              <option>Morning</option>
+              <option>Afternoon</option>
+              <option>Evening</option>
+            </select>
+          </div>
+          <div class="field full">
+            <label for="address">Pickup address</label>
+            <textarea id="address" required></textarea>
+          </div>
+          <div class="field full">
+            <label for="notes">Notes for the collector (optional)</label>
+            <input id="notes" type="text" placeholder="Gate number, floor, landmark">
+          </div>
+        </div>
+        <p class="err" id="err" role="alert"></p>
+        <div class="row">
+          <button class="btn primary" type="submit">Submit request</button>
+          <a class="btn" href="requests.html">View my requests</a>
+        </div>
+      </form>
+      <div>
+        <div class="map" id="map" aria-label="Map to pin the pickup address"></div>
+        <p class="muted" id="mapHelp" style="font-size:0.9rem">Drag the pin to your exact pickup spot. The pin is saved with the request.</p>
+      </div>
+    </div>
+  </div>
+</main>
+<div id="foot"></div>
+<script src="config.js"></script>
+<script src="app.js"></script>
+<script>
+  EOC.boot();
+  var $ = function (id) { return document.getElementById(id); };
+  var u = EOC.guard(['restaurant']);
+  if (u) {
+    $('name').value = u.name || '';
+    $('contact').value = u.contact || '';
+    $('phone').value = u.phone || '';
+    $('address').value = u.address || '';
+    var today = new Date().toISOString().slice(0, 10);
+    $('readyDate').min = today;
+    $('readyDate').value = today;
+
+    var pin = null; /* { lat, lng } when the restaurant has set a pin */
+    var map = null, marker = null, geocoder = null;
+
+    function setPin(latLng) {
+      pin = { lat: latLng.lat(), lng: latLng.lng() };
+      if (!marker) {
+        marker = new google.maps.Marker({ map: map, position: latLng, draggable: true });
+        marker.addListener('dragend', function () { setPin(marker.getPosition()); });
+      } else {
+        marker.setPosition(latLng);
+      }
+      map.panTo(latLng);
+    }
+
+    EOC.loadMaps().then(function (ok) {
+      if (!ok) { EOC.mapsMissingNote($('map')); $('mapHelp').hidden = true; return; }
+      var c = EOC_CONFIG.DEFAULT_CENTER;
+      map = new google.maps.Map($('map'), { center: c, zoom: 12, streetViewControl: false, mapTypeControl: false });
+      geocoder = new google.maps.Geocoder();
+      map.addListener('click', function (e) { setPin(e.latLng); });
+      /* find the typed address and drop a pin on it */
+      function findAddress() {
+        var a = $('address').value.trim();
+        if (!a) return;
+        geocoder.geocode({ address: a }, function (res, status) {
+          if (status === 'OK' && res[0]) { map.setZoom(16); setPin(res[0].geometry.location); }
+        });
+      }
+      $('address').addEventListener('change', findAddress);
+      findAddress();
+    });
+
+    $('f').addEventListener('submit', function (e) {
+      e.preventDefault();
+      var err = $('err'); err.textContent = '';
+      var v = function (id) { return $(id).value.trim(); };
+      if (!v('name') || !v('contact') || !v('phone') || !v('address')) { err.textContent = 'Fill in the name, contact person, phone and pickup address.'; return; }
+      if (!/^[0-9+\-\s]{7,15}$/.test(v('phone'))) { err.textContent = 'Enter a valid phone number.'; return; }
+      var litres = Number($('litres').value);
+      if (!(litres >= 1)) { err.textContent = 'Enter the litres of oil, at least 1.'; return; }
+      if (!$('readyDate').value) { err.textContent = 'Choose the date the oil is ready.'; return; }
+      EOC.addRequest({
+        name: v('name'), contact: v('contact'), phone: v('phone'), address: v('address'),
+        lat: pin ? pin.lat : null, lng: pin ? pin.lng : null,
+        litres: litres, container: $('container').value,
+        readyDate: $('readyDate').value, window: $('window').value, notes: v('notes')
+      });
+      EOC.toast('Request submitted.');
+      setTimeout(function () { location.href = 'requests.html'; }, 700);
+    });
+  }
+</script>
+</body>
+</html>
