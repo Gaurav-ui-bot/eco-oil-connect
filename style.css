@@ -65,6 +65,9 @@ main { padding-block: 40px 64px; }
 .flow li::before { content: "Stop " counter(s); font-family: var(--f-mono); font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); display: block; margin-bottom: 4px; }
 .flow p { margin: 0; font-size: 0.96rem; color: var(--muted); }
 section.band { border-top: 1.5px solid var(--line); padding-block: 48px; }
+.rules .yes h3 { color: var(--leaf); }
+.rules .no h3 { color: var(--bad); }
+.rules ul { margin: 0; padding-left: 1.2em; display: grid; gap: 8px; }
 
 /* status */
 .pill { font-family: var(--f-mono); font-size: 0.72rem; letter-spacing: 0.05em; text-transform: uppercase; padding: 3px 9px; border-radius: 99px; border: 1.5px solid currentColor; display: inline-block; white-space: nowrap; }
