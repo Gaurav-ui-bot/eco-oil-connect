@@ -4,7 +4,7 @@ A multi-page website that connects hotels and cloud kitchens with used cooking o
 
 ## Run it
 
-Open `index.html` in a browser. Or, from this folder, run `python3 -m http.server 8000` and visit http://localhost:8000.
+Open `index.html` in a browser. Or, from this folder, run `python3 -m http.server 8000`.
 
 ## Pages
 
