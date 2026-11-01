@@ -23,12 +23,13 @@
   function load() {
     try {
       var d = JSON.parse(localStorage.getItem(DB_KEY));
-      if (d && d.users) return d;
+      if (d && d.users) { d.settings = d.settings || { buyRate: 40, sellRate: 55 }; return d; }
     } catch (e) {}
     var seed = {
       users: [{ id: 'u_admin', role: 'admin', name: 'Admin', contact: 'Admin', email: 'admin@ecooil.local', password: 'admin123', phone: '', address: '', created: Date.now() }],
       requests: [],
-      messages: []
+      messages: [],
+      settings: { buyRate: 40, sellRate: 55 }
     };
     save(seed);
     return seed;
@@ -61,12 +62,33 @@
     localStorage.setItem(SES_KEY, u.id);
     return { ok: true, user: u };
   }
+  /* ---------- rates and profit ----------
+     buyRate  = rupees per litre paid to the restaurant
+     sellRate = rupees per litre paid by the biofuel company
+     Each request keeps the rates in force when it was raised. */
+  function getRates() { var s = load().settings; return { buy: Number(s.buyRate), sell: Number(s.sellRate) }; }
+  function setRates(buy, sell) { var d = load(); d.settings = { buyRate: Number(buy), sellRate: Number(sell) }; save(d); }
+  function money(r) {
+    var rt = getRates();
+    var b = r.buyRate != null ? r.buyRate : rt.buy, s = r.sellRate != null ? r.sellRate : rt.sell;
+    return { buy: b, sell: s, paid: r.litres * b, earned: r.litres * s, profit: r.litres * (s - b) };
+  }
+  function totals() {
+    var t = { litres: 0, paid: 0, earned: 0, profit: 0 };
+    load().requests.filter(function (r) { return r.status === 'delivered'; }).forEach(function (r) {
+      var m = money(r); t.litres += r.litres; t.paid += m.paid; t.earned += m.earned; t.profit += m.profit;
+    });
+    return t;
+  }
+  function inr(n) { return '\u20B9' + Number(n).toLocaleString('en-IN', { maximumFractionDigits: 2 }); }
+
   function addRequest(r) {
-    var d = load(), u = me();
+    var d = load(), u = me(), rt = getRates();
     var req = {
       id: uid('r'), restaurantId: u.id, restaurantName: r.name, contact: r.contact, phone: r.phone,
       address: r.address, lat: r.lat, lng: r.lng, litres: Number(r.litres), container: r.container,
       readyDate: r.readyDate, window: r.window, notes: r.notes,
+      buyRate: rt.buy, sellRate: rt.sell,
       status: 'submitted', collectorId: null, collectorName: '', biofuel: '',
       created: Date.now(), history: [{ status: 'submitted', at: Date.now(), by: u.name }]
     };
@@ -208,6 +230,7 @@
     esc: esc, fmtDate: fmtDate, STATUS: STATUS, STEPS: STEPS, STEP_LABEL: STEP_LABEL, CONTACT: CONTACT,
     load: load, me: me, login: login, logout: logout, register: register,
     addRequest: addRequest, setStatus: setStatus, deleteRequest: deleteRequest, deleteUser: deleteUser,
+    getRates: getRates, setRates: setRates, money: money, totals: totals, inr: inr,
     addMessage: addMessage, visibleRequests: visibleRequests, mapsLink: mapsLink,
     boot: boot, guard: guard, toast: toast, loadMaps: loadMaps, makeMap: makeMap, geocode: geocode, mapsMissingNote: mapsMissingNote
   };

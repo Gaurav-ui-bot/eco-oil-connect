@@ -23,6 +23,10 @@ Open `index.html` in a browser. Or, from this folder, run `python3 -m http.serve
 
 Submitted, then Accepted (by a collector), then Picked up, then Delivered (to a named biofuel company). A collector can also reject a request.
 
+## Rates and profit
+
+The platform owner (admin) is the middleman. In the Admin Panel the admin sets two rates per litre: the **buying rate** paid to the restaurant (starts at ₹40) and the **selling rate** paid by the biofuel company (starts at ₹55). Each request keeps the rates in force when it was raised. For a delivered request, profit is litres times (selling rate minus buying rate), so 20 litres gives (55 - 40) x 20 = ₹300. Restaurants see their payment on the Sell Used Oil page and on each request. The admin sees totals for litres, money paid out, money received and profit in the Admin Panel and the Dashboard.
+
 ## Maps
 
 The maps use OpenStreetMap through Leaflet, so no API key is needed and it works as long as the computer is online. On the Sell Used Oil page the restaurant types an address (the pin moves to it) or clicks the map to place a pin, and can drag the pin to fine-tune it. The Collection Requests page shows every request as a marker. Each request also has an "Open in Google Maps" link. The default map centre is set in `config.js`.

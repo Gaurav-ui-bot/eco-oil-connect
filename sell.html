@@ -34,6 +34,7 @@
           <div class="field">
             <label for="litres">Oil to collect (litres)</label>
             <input id="litres" type="number" min="1" max="5000" step="1" value="20" required>
+            <span class="muted" id="pay" style="font-size:0.88rem" role="status"></span>
           </div>
           <div class="field">
             <label for="container">Stored in</label>
@@ -93,6 +94,14 @@
     var today = new Date().toISOString().slice(0, 10);
     $('readyDate').min = today;
     $('readyDate').value = today;
+
+    /* show what the restaurant will be paid */
+    function showPay() {
+      var rate = EOC.getRates().buy, l = Number($('litres').value) || 0;
+      $('pay').textContent = 'You are paid ' + EOC.inr(rate) + ' per litre. Estimated payment: ' + EOC.inr(l * rate) + '.';
+    }
+    $('litres').addEventListener('input', showPay);
+    showPay();
 
     var pin = null; /* { lat, lng } when the restaurant has set a pin */
     var map = null, marker = null;

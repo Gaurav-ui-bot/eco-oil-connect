@@ -70,6 +70,8 @@
         stepper(r) +
         '<dl>' +
           '<dt>Oil</dt><dd>' + e(r.litres) + ' litres, ' + e(r.container) + '</dd>' +
+          (u.role !== 'collector' ? '<dt>Payment</dt><dd>' + EOC.inr(EOC.money(r).paid) + ' at ' + EOC.inr(EOC.money(r).buy) + ' per litre</dd>' : '') +
+          (u.role === 'admin' && r.status === 'delivered' ? '<dt>Profit</dt><dd>' + EOC.inr(EOC.money(r).profit) + '</dd>' : '') +
           '<dt>Ready</dt><dd>' + e(r.readyDate) + ', ' + e(String(r.window).toLowerCase()) + '</dd>' +
           '<dt>Address</dt><dd>' + e(r.address) + ' <a href="' + EOC.mapsLink(r) + '" target="_blank" rel="noopener">Open in Google Maps</a></dd>' +
           '<dt>Contact</dt><dd>' + e(r.contact) + ', ' + e(r.phone) + '</dd>' +

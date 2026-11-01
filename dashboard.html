@@ -17,6 +17,7 @@
       <p id="intro"></p>
     </div>
     <div class="grid4" id="tiles"></div>
+    <div class="grid4" id="money" style="margin-top:16px" hidden></div>
     <div class="grid2" style="margin-top:24px">
       <div class="card"><h3>Requests by status</h3><div class="bars" id="bars"></div></div>
       <div class="card"><h3>Recent activity</h3><ul class="feed" id="feed"></ul></div>
@@ -38,6 +39,12 @@
     var delivered = rs.filter(function (r) { return r.status === 'delivered'; }).reduce(function (a, r) { return a + r.litres; }, 0);
     var tile = function (n, l) { return '<div class="tile"><b>' + n + '</b><span>' + l + '</span></div>'; };
     $('tiles').innerHTML = tile(rs.length, 'Requests') + tile(count('submitted'), 'Waiting') + tile(count('accepted') + count('picked_up'), 'In progress') + tile(delivered, 'Litres delivered');
+
+    if (u.role === 'admin') {
+      var m = EOC.totals(), big = function (n, l) { return '<div class="tile"><b style="font-size:1.6rem">' + n + '</b><span>' + l + '</span></div>'; };
+      $('money').hidden = false;
+      $('money').innerHTML = big(EOC.inr(m.paid), 'Paid to restaurants') + big(EOC.inr(m.earned), 'Received from biofuel') + big(EOC.inr(m.profit), 'Profit') + big(EOC.inr(EOC.getRates().sell - EOC.getRates().buy), 'Margin per litre');
+    }
 
     var max = Math.max(1, rs.length);
     $('bars').innerHTML = Object.keys(EOC.STATUS).map(function (k) {

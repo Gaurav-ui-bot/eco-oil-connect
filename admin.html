@@ -16,6 +16,16 @@
       <h1>Users, requests and messages</h1>
     </div>
     <div class="grid4" id="tiles" style="margin-bottom:28px"></div>
+    <div class="card" id="rates" style="margin-bottom:28px">
+      <h3>Rates and profit</h3>
+      <p class="muted" style="margin:0 0 16px">You buy used oil from restaurants and sell it to biofuel companies. Profit per litre is the selling rate minus the buying rate.</p>
+      <div class="form-grid">
+        <div class="field"><label for="buyRate">Buying rate (₹ per litre, paid to the restaurant)</label><input id="buyRate" type="number" min="0" step="0.5"></div>
+        <div class="field"><label for="sellRate">Selling rate (₹ per litre, paid by the biofuel company)</label><input id="sellRate" type="number" min="0" step="0.5"></div>
+      </div>
+      <div class="row" style="margin-top:14px"><button class="btn primary small" id="saveRates" type="button">Save rates</button><span class="muted" id="rateMsg" role="status" style="font-size:0.9rem"></span></div>
+      <div class="grid4" id="money" style="margin-top:18px"></div>
+    </div>
     <div class="tabs" role="tablist">
       <button type="button" data-tab="users" class="on">Users</button>
       <button type="button" data-tab="reqs">Requests</button>
@@ -39,7 +49,17 @@
       $('tiles').innerHTML = t(d.users.filter(function (x) { return x.role === 'restaurant'; }).length, 'Restaurants') +
         t(d.users.filter(function (x) { return x.role === 'collector'; }).length, 'Collectors') +
         t(d.requests.length, 'Requests') + t(d.messages.length, 'Messages');
+      var m = EOC.totals(), big = function (n, l) { return '<div class="tile"><b style="font-size:1.6rem">' + n + '</b><span>' + l + '</span></div>'; };
+      $('money').innerHTML = big(m.litres, 'Litres delivered') + big(EOC.inr(m.paid), 'Paid to restaurants') + big(EOC.inr(m.earned), 'Received from biofuel') + big(EOC.inr(m.profit), 'Profit');
     }
+    var rt = EOC.getRates();
+    $('buyRate').value = rt.buy; $('sellRate').value = rt.sell;
+    $('saveRates').addEventListener('click', function () {
+      var b = Number($('buyRate').value), s = Number($('sellRate').value);
+      if (!(b >= 0) || !(s >= 0) || $('buyRate').value === '' || $('sellRate').value === '') { $('rateMsg').textContent = 'Enter both rates as numbers.'; return; }
+      EOC.setRates(b, s);
+      $('rateMsg').textContent = 'Saved. ' + EOC.inr(s - b) + ' profit per litre. New requests use these rates; existing requests keep theirs.';
+    });
     function table(head, rows) {
       return '<div class="tablewrap"><table><thead><tr>' + head.map(function (h) { return '<th>' + h + '</th>'; }).join('') + '</tr></thead><tbody>' + rows + '</tbody></table></div>';
     }
@@ -53,10 +73,10 @@
             (x.id === u.id ? '' : '<button class="btn danger small" data-deluser="' + x.id + '">Delete</button>') + '</td></tr>';
         }).join(''));
       } else if (tab === 'reqs') {
-        html = d.requests.length ? table(['Restaurant', 'Litres', 'Address', 'Status', 'Collector', 'Biofuel company', 'Requested', ''], d.requests.slice().reverse().map(function (r) {
+        html = d.requests.length ? table(['Restaurant', 'Litres', 'Address', 'Status', 'Collector', 'Biofuel company', 'Profit', 'Requested', ''], d.requests.slice().reverse().map(function (r) {
           return '<tr><td>' + e(r.restaurantName) + '</td><td>' + e(r.litres) + '</td><td>' + e(r.address) + ' <a href="' + EOC.mapsLink(r) + '" target="_blank" rel="noopener">Map</a></td><td><select data-rs="' + r.id + '" aria-label="Status">' +
             Object.keys(EOC.STATUS).map(function (k) { return '<option value="' + k + '"' + (k === r.status ? ' selected' : '') + '>' + EOC.STATUS[k] + '</option>'; }).join('') +
-            '</select></td><td>' + e(r.collectorName || '-') + '</td><td>' + e(r.biofuel || '-') + '</td><td>' + EOC.fmtDate(r.created) + '</td><td><div class="req-actions" style="margin:0">' +
+            '</select></td><td>' + e(r.collectorName || '-') + '</td><td>' + e(r.biofuel || '-') + '</td><td>' + (r.status === 'delivered' ? EOC.inr(EOC.money(r).profit) : '-') + '</td><td>' + EOC.fmtDate(r.created) + '</td><td><div class="req-actions" style="margin:0">' +
             (r.status === 'submitted' ? '<button class="btn primary small" data-accept="' + r.id + '">Accept</button><button class="btn small" data-reject="' + r.id + '">Reject</button>' : '') +
             '<button class="btn danger small" data-delreq="' + r.id + '">Delete</button></div></td></tr>';
         }).join('')) : '<div class="empty">No requests yet.</div>';
