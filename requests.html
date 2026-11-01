@@ -47,18 +47,19 @@
     }
 
     function actions(r) {
-      if (u.role === 'collector') {
-        if (r.status === 'submitted') {
-          return '<button class="btn primary small" data-act="accept" data-id="' + r.id + '">Accept</button>' +
-                 '<button class="btn danger small" data-act="reject" data-id="' + r.id + '">Reject</button>';
-        }
-        if (r.status === 'accepted' && r.collectorId === u.id) {
-          return '<button class="btn primary small" data-act="pick" data-id="' + r.id + '">Mark picked up</button>';
-        }
-        if (r.status === 'picked_up' && r.collectorId === u.id) {
-          return '<input type="text" id="bf_' + r.id + '" placeholder="Biofuel company name" aria-label="Biofuel company name">' +
-                 '<button class="btn primary small" data-act="deliver" data-id="' + r.id + '">Mark delivered</button>';
-        }
+      var isAdmin = u.role === 'admin';
+      var mine = isAdmin || (u.role === 'collector' && r.collectorId === u.id);
+      if (u.role !== 'collector' && !isAdmin) return '';
+      if (r.status === 'submitted') {
+        return '<button class="btn primary small" data-act="accept" data-id="' + r.id + '">Accept</button>' +
+               '<button class="btn danger small" data-act="reject" data-id="' + r.id + '">Reject</button>';
+      }
+      if (r.status === 'accepted' && mine) {
+        return '<button class="btn primary small" data-act="pick" data-id="' + r.id + '">Mark picked up</button>';
+      }
+      if (r.status === 'picked_up' && mine) {
+        return '<input type="text" id="bf_' + r.id + '" placeholder="Biofuel company name" aria-label="Biofuel company name">' +
+               '<button class="btn primary small" data-act="deliver" data-id="' + r.id + '">Mark delivered</button>';
       }
       return '';
     }

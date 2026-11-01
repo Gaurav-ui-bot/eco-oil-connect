@@ -56,7 +56,9 @@
         html = d.requests.length ? table(['Restaurant', 'Litres', 'Address', 'Status', 'Collector', 'Biofuel company', 'Requested', ''], d.requests.slice().reverse().map(function (r) {
           return '<tr><td>' + e(r.restaurantName) + '</td><td>' + e(r.litres) + '</td><td>' + e(r.address) + ' <a href="' + EOC.mapsLink(r) + '" target="_blank" rel="noopener">Map</a></td><td><select data-rs="' + r.id + '" aria-label="Status">' +
             Object.keys(EOC.STATUS).map(function (k) { return '<option value="' + k + '"' + (k === r.status ? ' selected' : '') + '>' + EOC.STATUS[k] + '</option>'; }).join('') +
-            '</select></td><td>' + e(r.collectorName || '-') + '</td><td>' + e(r.biofuel || '-') + '</td><td>' + EOC.fmtDate(r.created) + '</td><td><button class="btn danger small" data-delreq="' + r.id + '">Delete</button></td></tr>';
+            '</select></td><td>' + e(r.collectorName || '-') + '</td><td>' + e(r.biofuel || '-') + '</td><td>' + EOC.fmtDate(r.created) + '</td><td><div class="req-actions" style="margin:0">' +
+            (r.status === 'submitted' ? '<button class="btn primary small" data-accept="' + r.id + '">Accept</button><button class="btn small" data-reject="' + r.id + '">Reject</button>' : '') +
+            '<button class="btn danger small" data-delreq="' + r.id + '">Delete</button></div></td></tr>';
         }).join('')) : '<div class="empty">No requests yet.</div>';
       } else {
         html = d.messages.length ? table(['From', 'Email', 'Message', 'Sent'], d.messages.slice().reverse().map(function (m) {
@@ -69,12 +71,23 @@
       var b = ev.target.closest('[data-tab]'); if (!b) return; tab = b.dataset.tab; render();
     });
     $('panel').addEventListener('click', function (ev) {
+      var ac = ev.target.closest('[data-accept]'), rj = ev.target.closest('[data-reject]');
+      if (ac) { EOC.setStatus(ac.dataset.accept, 'accepted'); EOC.toast('Request accepted.'); render(); return; }
+      if (rj) { EOC.setStatus(rj.dataset.reject, 'rejected'); EOC.toast('Request rejected.'); render(); return; }
       var du = ev.target.closest('[data-deluser]'), dr = ev.target.closest('[data-delreq]');
       if (du && confirm('Delete this user?')) { EOC.deleteUser(du.dataset.deluser); render(); }
       if (dr && confirm('Delete this request?')) { EOC.deleteRequest(dr.dataset.delreq); render(); }
     });
     $('panel').addEventListener('change', function (ev) {
-      if (ev.target.matches('[data-rs]')) { EOC.setStatus(ev.target.dataset.rs, ev.target.value); render(); }
+      if (ev.target.matches('[data-rs]')) {
+        var extra = null;
+        if (ev.target.value === 'delivered') {
+          var name = prompt('Which biofuel company received the oil?');
+          if (name && name.trim()) extra = { biofuel: name.trim() };
+        }
+        EOC.setStatus(ev.target.dataset.rs, ev.target.value, extra);
+        render();
+      }
     });
     render();
   }
