@@ -72,7 +72,7 @@
       </form>
       <div>
         <div class="map" id="map" aria-label="Map to pin the pickup address"></div>
-        <p class="muted" id="mapHelp" style="font-size:0.9rem">Drag the pin to your exact pickup spot. The pin is saved with the request.</p>
+        <p class="muted" id="mapHelp" style="font-size:0.9rem">Click the map or drag the pin to your exact pickup spot. The pin is saved with the request.</p>
       </div>
     </div>
   </div>
@@ -94,32 +94,27 @@
     $('readyDate').value = today;
 
     var pin = null; /* { lat, lng } when the restaurant has set a pin */
-    var map = null, marker = null, geocoder = null;
+    var map = null, marker = null;
 
-    function setPin(latLng) {
-      pin = { lat: latLng.lat(), lng: latLng.lng() };
+    function setPin(lat, lng) {
+      pin = { lat: lat, lng: lng };
       if (!marker) {
-        marker = new google.maps.Marker({ map: map, position: latLng, draggable: true });
-        marker.addListener('dragend', function () { setPin(marker.getPosition()); });
+        marker = L.marker([lat, lng], { draggable: true }).addTo(map);
+        marker.on('dragend', function () { var p = marker.getLatLng(); pin = { lat: p.lat, lng: p.lng }; });
       } else {
-        marker.setPosition(latLng);
+        marker.setLatLng([lat, lng]);
       }
-      map.panTo(latLng);
+      map.setView([lat, lng], Math.max(map.getZoom(), 16));
     }
 
     EOC.loadMaps().then(function (ok) {
       if (!ok) { EOC.mapsMissingNote($('map')); $('mapHelp').hidden = true; return; }
-      var c = EOC_CONFIG.DEFAULT_CENTER;
-      map = new google.maps.Map($('map'), { center: c, zoom: 12, streetViewControl: false, mapTypeControl: false });
-      geocoder = new google.maps.Geocoder();
-      map.addListener('click', function (e) { setPin(e.latLng); });
+      map = EOC.makeMap($('map'), 12);
+      map.on('click', function (e) { setPin(e.latlng.lat, e.latlng.lng); });
       /* find the typed address and drop a pin on it */
       function findAddress() {
         var a = $('address').value.trim();
-        if (!a) return;
-        geocoder.geocode({ address: a }, function (res, status) {
-          if (status === 'OK' && res[0]) { map.setZoom(16); setPin(res[0].geometry.location); }
-        });
+        if (a) EOC.geocode(a, function (p) { if (p) setPin(p.lat, p.lng); });
       }
       $('address').addEventListener('change', findAddress);
       findAddress();

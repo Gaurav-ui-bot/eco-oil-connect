@@ -1,4 +1,4 @@
-/* Eco Oil Connect shared code: accounts, requests, status flow, navigation, Google Maps.
+/* Eco Oil Connect shared code: accounts, requests, status flow, navigation, maps.
    Data is kept in the browser (localStorage) so the project runs with no server.
    To go beyond a demo, replace the functions in the "data" section with calls to a real backend. */
 (function () {
@@ -145,29 +145,42 @@
   }
   function boot() { nav(); footer(); }
 
-  /* ---------- Google Maps ---------- */
-  function keyOk() {
-    var k = window.EOC_CONFIG && EOC_CONFIG.GOOGLE_MAPS_API_KEY;
-    return !!k && k.indexOf('YOUR_') !== 0;
-  }
+  /* ---------- Maps (Leaflet + OpenStreetMap, no API key needed) ---------- */
+  var LEAFLET = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/';
   var mapsPromise = null;
   function loadMaps() {
     if (mapsPromise) return mapsPromise;
     mapsPromise = new Promise(function (resolve) {
-      if (window.google && google.maps) return resolve(true);
-      if (!keyOk()) return resolve(false);
-      window.__eocMapsReady = function () { resolve(true); };
-      window.gm_authFailure = function () { resolve(false); document.querySelectorAll('.map').forEach(function (m) { m.innerHTML = '<div class="notice">Google rejected the API key. Check the key, the enabled APIs and the allowed website address.</div>'; }); };
+      if (window.L && L.map) return resolve(true);
+      var css = document.createElement('link');
+      css.rel = 'stylesheet'; css.href = LEAFLET + 'leaflet.css';
+      document.head.appendChild(css);
       var s = document.createElement('script');
-      s.src = 'https://maps.googleapis.com/maps/api/js?key=' + encodeURIComponent(EOC_CONFIG.GOOGLE_MAPS_API_KEY) + '&callback=__eocMapsReady';
-      s.async = true;
+      s.src = LEAFLET + 'leaflet.js';
+      s.onload = function () { resolve(!!(window.L && L.map)); };
       s.onerror = function () { resolve(false); };
       document.head.appendChild(s);
     });
     return mapsPromise;
   }
+  /* draws the OpenStreetMap map inside the element and returns the Leaflet map */
+  function makeMap(el, zoom) {
+    var c = (window.EOC_CONFIG && EOC_CONFIG.DEFAULT_CENTER) || { lat: 23.0225, lng: 72.5714 };
+    var map = L.map(el).setView([c.lat, c.lng], zoom || 12);
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    }).addTo(map);
+    return map;
+  }
+  /* finds an address with OpenStreetMap search; callback gets {lat, lng} or null */
+  function geocode(address, cb) {
+    fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&q=' + encodeURIComponent(address))
+      .then(function (r) { return r.json(); })
+      .then(function (res) { cb(res && res[0] ? { lat: parseFloat(res[0].lat), lng: parseFloat(res[0].lon) } : null); })
+      .catch(function () { cb(null); });
+  }
   function mapsMissingNote(el) {
-    el.innerHTML = '<div class="notice">Map is off. Add your Google Maps API key in config.js to turn it on. Everything else works without it.</div>';
+    el.innerHTML = '<div class="notice">The map could not load. Check your internet connection. Everything else works, and each request has an "Open in Google Maps" link.</div>';
   }
 
   window.EOC = {
@@ -175,6 +188,6 @@
     load: load, me: me, login: login, logout: logout, register: register,
     addRequest: addRequest, setStatus: setStatus, deleteRequest: deleteRequest, deleteUser: deleteUser,
     addMessage: addMessage, visibleRequests: visibleRequests, mapsLink: mapsLink,
-    boot: boot, guard: guard, toast: toast, loadMaps: loadMaps, mapsMissingNote: mapsMissingNote, keyOk: keyOk
+    boot: boot, guard: guard, toast: toast, loadMaps: loadMaps, makeMap: makeMap, geocode: geocode, mapsMissingNote: mapsMissingNote
   };
 })();

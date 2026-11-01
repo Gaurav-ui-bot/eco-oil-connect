@@ -95,21 +95,21 @@
 
     function drawMarkers(rs) {
       if (!map) return;
-      markers.forEach(function (m) { m.setMap(null); });
+      markers.forEach(function (m) { map.removeLayer(m); });
       markers = [];
-      var bounds = new google.maps.LatLngBounds(), n = 0;
+      var pts = [];
       rs.forEach(function (r) {
         if (r.lat == null || r.lng == null) return;
-        var m = new google.maps.Marker({ map: map, position: { lat: r.lat, lng: r.lng }, title: r.restaurantName + ' (' + r.litres + ' L)' });
-        m.addListener('click', function () {
+        var m = L.marker([r.lat, r.lng]).addTo(map).bindTooltip(r.restaurantName + ' (' + r.litres + ' L)');
+        m.on('click', function () {
           var el = $('req_' + r.id);
           document.querySelectorAll('.req.hl').forEach(function (x) { x.classList.remove('hl'); });
           if (el) { el.classList.add('hl'); el.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
         });
-        markers.push(m); bounds.extend(m.getPosition()); n++;
+        markers.push(m); pts.push([r.lat, r.lng]);
       });
-      if (n === 1) { map.setCenter(bounds.getCenter()); map.setZoom(15); }
-      else if (n > 1) map.fitBounds(bounds);
+      if (pts.length === 1) map.setView(pts[0], 15);
+      else if (pts.length > 1) map.fitBounds(pts, { padding: [30, 30] });
     }
 
     $('list').addEventListener('click', function (ev) {
@@ -130,7 +130,7 @@
     render();
     EOC.loadMaps().then(function (ok) {
       if (!ok) { EOC.mapsMissingNote($('map')); $('map').classList.add('static'); return; }
-      map = new google.maps.Map($('map'), { center: EOC_CONFIG.DEFAULT_CENTER, zoom: 11, streetViewControl: false, mapTypeControl: false });
+      map = EOC.makeMap($('map'), 11);
       render();
     });
   }
