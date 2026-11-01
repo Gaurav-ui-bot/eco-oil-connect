@@ -58,6 +58,7 @@
           <div class="field full">
             <label for="address">Pickup address</label>
             <textarea id="address" required></textarea>
+            <div class="row"><button type="button" class="btn small" id="findBtn">Find on map</button><span class="muted" id="mapMsg" style="font-size:0.88rem" role="status"></span></div>
           </div>
           <div class="field full">
             <label for="notes">Notes for the collector (optional)</label>
@@ -108,16 +109,24 @@
     }
 
     EOC.loadMaps().then(function (ok) {
-      if (!ok) { EOC.mapsMissingNote($('map')); $('mapHelp').hidden = true; return; }
+      if (!ok) { EOC.mapsMissingNote($('map')); $('mapHelp').hidden = true; $('findBtn').hidden = true; return; }
       map = EOC.makeMap($('map'), 12);
       map.on('click', function (e) { setPin(e.latlng.lat, e.latlng.lng); });
-      /* find the typed address and drop a pin on it */
+      /* find the typed address and drop a pin near it */
+      var timer = null;
       function findAddress() {
         var a = $('address').value.trim();
-        if (a) EOC.geocode(a, function (p) { if (p) setPin(p.lat, p.lng); });
+        if (!a) { $('mapMsg').textContent = 'Type an address first.'; return; }
+        $('mapMsg').textContent = 'Searching the map...';
+        EOC.geocode(a, function (p) {
+          if (!p) { $('mapMsg').textContent = 'Address not found. Click the map to place the pin yourself.'; return; }
+          setPin(p.lat, p.lng);
+          $('mapMsg').textContent = p.exact ? 'Pin placed. Drag it to adjust.' : 'Pin placed near "' + p.matched + '". Drag it to your exact spot.';
+        });
       }
-      $('address').addEventListener('change', findAddress);
-      findAddress();
+      $('findBtn').addEventListener('click', findAddress);
+      $('address').addEventListener('input', function () { clearTimeout(timer); timer = setTimeout(findAddress, 1200); });
+      if ($('address').value.trim()) findAddress();
     });
 
     $('f').addEventListener('submit', function (e) {

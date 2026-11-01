@@ -172,12 +172,33 @@
     }).addTo(map);
     return map;
   }
-  /* finds an address with OpenStreetMap search; callback gets {lat, lng} or null */
+  /* finds an address with OpenStreetMap search. If the full address is not found it retries with
+     shorter versions (dropping the first parts, such as a flat or house number), so a nearby match still works.
+     The callback gets {lat, lng, matched} or null. */
   function geocode(address, cb) {
-    fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&q=' + encodeURIComponent(address))
-      .then(function (r) { return r.json(); })
-      .then(function (res) { cb(res && res[0] ? { lat: parseFloat(res[0].lat), lng: parseFloat(res[0].lon) } : null); })
-      .catch(function () { cb(null); });
+    var text = String(address).replace(/\s+/g, ' ').trim();
+    var parts = text.split(',').map(function (x) { return x.trim(); }).filter(Boolean);
+    var tries = [];
+    if (parts.length > 1) {
+      for (var i = 0; i < parts.length && tries.length < 4; i++) tries.push(parts.slice(i).join(', '));
+    } else {
+      var w = text.split(' ');
+      tries.push(text);
+      if (w.length > 3) tries.push(w.slice(2).join(' '));
+      if (w.length > 2) tries.push(w.slice(-2).join(' '));
+    }
+    tries = tries.filter(function (t, i) { return t && tries.indexOf(t) === i; });
+    function attempt(n) {
+      if (n >= tries.length) return cb(null);
+      fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=in&q=' + encodeURIComponent(tries[n]))
+        .then(function (r) { return r.json(); })
+        .then(function (res) {
+          if (res && res[0]) cb({ lat: parseFloat(res[0].lat), lng: parseFloat(res[0].lon), matched: tries[n], exact: n === 0 });
+          else attempt(n + 1);
+        })
+        .catch(function () { cb(null); });
+    }
+    attempt(0);
   }
   function mapsMissingNote(el) {
     el.innerHTML = '<div class="notice">The map could not load. Check your internet connection. Everything else works, and each request has an "Open in Google Maps" link.</div>';
